@@ -313,4 +313,141 @@ class ProductTest extends TestCase
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['sku']);
     }
+
+    public function test_product_stock_can_be_increased(): void
+    {
+        $product = Product::factory()->create([
+            'stock_quantity' => 10,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'increase',
+                'quantity' => 5,
+            ],
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('data.id', $product->id)
+            ->assertJsonPath('data.stock_quantity', 15);
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'stock_quantity' => 15,
+        ]);
+    }
+
+    public function test_product_stock_can_be_decreased(): void
+    {
+        $product = Product::factory()->create([
+            'stock_quantity' => 10,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'decrease',
+                'quantity' => 3,
+            ],
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('data.id', $product->id)
+            ->assertJsonPath('data.stock_quantity', 7);
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'stock_quantity' => 7,
+        ]);
+    }
+
+    public function test_product_stock_cannot_be_decreased_below_zero(): void
+    {
+        $product = Product::factory()->create([
+            'stock_quantity' => 5,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'decrease',
+                'quantity' => 10,
+            ],
+        );
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'stock_quantity' => 5,
+        ]);
+    }
+
+    public function test_stock_adjustment_requires_positive_quantity(): void
+    {
+        $product = Product::factory()->create([
+            'stock_quantity' => 10,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'increase',
+                'quantity' => 0,
+            ],
+        );
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity');
+    }
+
+    public function test_stock_adjustment_rejects_negative_quantity(): void
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'increase',
+                'quantity' => -5,
+            ],
+        );
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity');
+    }
+
+    public function test_stock_adjustment_requires_valid_type(): void
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [
+                'type' => 'invalid',
+                'quantity' => 5,
+            ],
+        );
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_stock_adjustment_requires_type_and_quantity(): void
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->postJson(
+            "/api/v1/products/{$product->id}/stock",
+            [],
+        );
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'type',
+                'quantity',
+            ]);
+    }
 }

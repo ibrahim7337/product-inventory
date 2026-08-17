@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\StockAdjustmentRequest;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\StockAdjustmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -51,7 +53,12 @@ class ProductController extends Controller
         UpdateProductRequest $request,
         Product $product
     ) {
-        $product->update($request->validated());
+        /**
+         * @var array{type: string, quantity: int} $data
+         */
+        $data = $request->validated();
+
+        $product->update($data);
 
         return new ProductResource($product->refresh());
     }
@@ -66,5 +73,27 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Product deleted successfully.',
         ]);
+    }
+
+    /**
+     * Adjust Stock
+     */
+    public function adjustStock(
+        StockAdjustmentRequest $request,
+        Product $product,
+        StockAdjustmentService $service
+    ): ProductResource {
+        /**
+         * @var array{type: string, quantity: int} $data
+         */
+        $data = $request->validated();
+
+        $adjustedProduct = $service->adjust(
+            $product,
+            $data['type'],
+            $data['quantity'],
+        );
+
+        return new ProductResource($adjustedProduct);
     }
 }
