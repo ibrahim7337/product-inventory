@@ -96,4 +96,17 @@ class ProductController extends Controller
 
         return new ProductResource($adjustedProduct);
     }
+
+    /**
+     * Low Stock
+     */
+    public function lowStock(): AnonymousResourceCollection
+    {
+        return ProductResource::collection(
+            Product::query()
+                ->lowStock()
+                ->latest()
+                ->paginate(15)
+        );
+    }
 }

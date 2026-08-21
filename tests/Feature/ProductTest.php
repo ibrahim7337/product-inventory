@@ -450,4 +450,24 @@ class ProductTest extends TestCase
                 'quantity',
             ]);
     }
+
+    public function test_low_stock_products_are_listed(): void
+    {
+        Product::factory()->create([
+            'stock_quantity' => 5,
+            'low_stock_threshold' => 15,
+        ]);
+
+        Product::factory()->create([
+            'stock_quantity' => 15,
+            'low_stock_threshold' => 10,
+        ]);
+
+        $response = $this->getJson('/api/v1/products/low-stock');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.stock_quantity', 5)
+            ->assertJsonPath('data.0.low_stock_threshold', 15);
+    }
 }

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\ProductStatus;
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -53,5 +54,20 @@ class Product extends Model
             'stock_quantity' => 'integer',
             'low_stock_threshold' => 'integer',
         ];
+    }
+
+    /**
+     * Scope products that are low in stock.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeLowStock(Builder $query): Builder
+    {
+        return $query->whereColumn(
+            'stock_quantity',
+            '<=',
+            'low_stock_threshold'
+        );
     }
 }
